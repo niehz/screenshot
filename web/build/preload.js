@@ -301,4 +301,8 @@ window.ssSticker = {
     if (ipcRenderer) ipcRenderer.on('sticker:init', (_e, payload) => cb(payload));
   },
   close() { try { window.close(); } catch (e) {} },
+  // uTools / 浏览器不支持鼠标穿透与窗口级透明（能力探测降级）
+  supportsClickThrough: false,
+  setClickThrough() { return Promise.resolve(false); },
+  setWindowOpacity() { return Promise.resolve(false); },
 };

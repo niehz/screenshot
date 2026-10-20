@@ -44,4 +44,7 @@ contextBridge.exposeInMainWorld('ssOverlay', {
 contextBridge.exposeInMainWorld('ssSticker', {
   onInit: (cb) => ipcRenderer.on('sticker:init', (_e, payload) => cb(payload)),
   close: () => ipcRenderer.send('sticker:close'),
+  supportsClickThrough: true,
+  setClickThrough: (flag) => ipcRenderer.invoke('ss:set-click-through', !!flag),
+  setWindowOpacity: (value) => ipcRenderer.invoke('ss:set-window-opacity', Number(value)),
 });

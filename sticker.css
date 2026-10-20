@@ -48,7 +48,7 @@ html, body {
 .sticker-frame:hover .sticker-bar { opacity: 1; }
 
 .sticker-close, .sticker-copy, .sticker-opacity,
-.sticker-rot-l, .sticker-rot-r, .sticker-flip-h, .sticker-flip-v {
+.sticker-rot-l, .sticker-rot-r, .sticker-flip-h, .sticker-flip-v, .sticker-through {
   width: 26px; height: 26px;
   display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid rgba(148, 163, 184, .4);
@@ -61,9 +61,11 @@ html, body {
 }
 .sticker-close:hover { background: #f87171; color: #111827; border-color: #f87171; }
 .sticker-copy:hover, .sticker-opacity:hover,
-.sticker-rot-l:hover, .sticker-rot-r:hover, .sticker-flip-h:hover, .sticker-flip-v:hover {
+.sticker-rot-l:hover, .sticker-rot-r:hover, .sticker-flip-h:hover, .sticker-flip-v:hover,
+.sticker-through:hover {
   background: #38bdf8; color: #04141f; border-color: #38bdf8;
 }
+.sticker-through.active { background: #f59e0b; color: #111827; border-color: #f59e0b; }
 
 /* 右下角缩放手柄 */
 .sticker-resize {

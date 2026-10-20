@@ -50,6 +50,7 @@ let isQuitting = false;
 let win = null;
 let tray = null;
 let overlayWin = null;
+const stickerWins = new Set();
 let settings = null;
 let settingsPath = '';
 
@@ -333,8 +334,15 @@ function createStickerWindow(payload) {
   win2.webContents.once('did-finish-load', () => {
     if (!win2.isDestroyed()) win2.webContents.send('sticker:init', { dataURL: dataURL });
   });
-  win2.on('closed', () => ipcMain.removeListener('sticker:close', onClose));
+  stickerWins.add(win2);
+  win2.on('closed', () => { stickerWins.delete(win2); ipcMain.removeListener('sticker:close', onClose); });
   return win2;
+}
+
+// 从 IPC 事件来源解析出对应的窗口（贴图窗鼠标穿透/透明度用）
+function senderWindow(e) {
+  const wc = e && e.sender;
+  return BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && w.webContents === wc) || null;
 }
 
 // ── 保存 / 剪贴板 ───────────────────────────────────────────────
@@ -392,6 +400,21 @@ function registerIpc() {
   ipcMain.handle('ss:create-sticker', (_e, payload) => {
     createStickerWindow(payload);
     return true;
+  });
+  // 贴图窗鼠标穿透（仅 Electron 支持）；forward=true 时仍接收 mousemove 以探测悬停
+  ipcMain.handle('ss:set-click-through', (e, flag) => {
+    const w = senderWindow(e);
+    if (!w) return false;
+    try {
+      w.setIgnoreMouseEvents(!!flag, { forward: true });
+      return true;
+    } catch (err) { return false; }
+  });
+  ipcMain.handle('ss:set-window-opacity', (e, value) => {
+    const w = senderWindow(e);
+    if (!w) return false;
+    const v = Math.min(1, Math.max(0.1, Number(value) || 1));
+    try { w.setOpacity(v); return true; } catch (err) { return false; }
   });
 }
 

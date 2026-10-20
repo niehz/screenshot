@@ -13,6 +13,7 @@
   const rotRBtn = $('#sticker-rot-r');
   const flipHBtn = $('#sticker-flip-h');
   const flipVBtn = $('#sticker-flip-v');
+  const throughBtn = $('#sticker-through');
   const resizeHandle = $('#sticker-resize');
 
   let sourceDataURL = '';
@@ -58,7 +59,22 @@
 
   function applyOpacity() {
     frame.style.opacity = String(OPACITIES[opacityStep]);
+    const s = typeof window !== 'undefined' && window.ssShell;
+    if (s && s.isElectron && window.ssSticker && window.ssSticker.supportsClickThrough) {
+      window.ssSticker.setWindowOpacity(OPACITIES[opacityStep]);
+    }
     opacityStep = (opacityStep + 1) % OPACITIES.length;
+  }
+
+  // 鼠标穿透：仅 Electron 支持，uTools/浏览器降级为提示
+  let clickThrough = false;
+  function toggleClickThrough() {
+    const st = window.ssSticker;
+    if (!st || !st.supportsClickThrough) { toast(t('clickThroughUnsupported'), true); return; }
+    clickThrough = !clickThrough;
+    st.setClickThrough(clickThrough);
+    if (throughBtn) throughBtn.classList.toggle('active', clickThrough);
+    toast(clickThrough ? t('clickThroughOn') : t('clickThroughOff'));
   }
 
   function rotate(dir) {
@@ -100,6 +116,7 @@
   if (rotRBtn) rotRBtn.addEventListener('click', () => rotate(1));
   if (flipHBtn) flipHBtn.addEventListener('click', () => { flipH = !flipH; applyTransform(); });
   if (flipVBtn) flipVBtn.addEventListener('click', () => { flipV = !flipV; applyTransform(); });
+  if (throughBtn) throughBtn.addEventListener('click', toggleClickThrough);
 
   // 右下角拖拽缩放（仅在支持 resizeTo 的环境中生效）
   if (resizeHandle) {
@@ -131,6 +148,7 @@
       case 'h': case 'H': flipH = !flipH; applyTransform(); break;
       case 'v': case 'V': flipV = !flipV; applyTransform(); break;
       case 'o': case 'O': applyOpacity(); break;
+      case 'x': case 'X': if (e.ctrlKey || e.metaKey) { e.preventDefault(); toggleClickThrough(); } break;
       case 'c': case 'C': copyCurrent(); break;
       default: break;
     }

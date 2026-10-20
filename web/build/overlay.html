@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>截图标注 / Annotate</title>
+  <link rel="stylesheet" href="overlay.css?v=568328629352">
+</head>
+<body class="overlay-root">
+  <!-- 底图 + 标注合成画布 -->
+  <canvas id="scene"></canvas>
+  <!-- 框选遮罩（截图阶段） -->
+  <canvas id="mask" hidden></canvas>
+
+  <!-- 框选阶段：尺寸与提示 -->
+  <div class="sel-hint" id="sel-hint" hidden></div>
+
+  <!-- 工具条 -->
+  <div class="toolbar" id="toolbar" hidden>
+    <div class="tool-group" id="tool-group">
+      <button type="button" class="tool active" data-tool="rect"    data-i18n-title="toolRect"    title="矩形">▢</button>
+      <button type="button" class="tool" data-tool="ellipse"  data-i18n-title="toolEllipse"  title="椭圆">◯</button>
+      <button type="button" class="tool" data-tool="arrow"    data-i18n-title="toolArrow"    title="箭头">➤</button>
+      <button type="button" class="tool" data-tool="line"     data-i18n-title="toolLine"     title="直线">╱</button>
+      <button type="button" class="tool" data-tool="pen"      data-i18n-title="toolPen"      title="画笔">✏️</button>
+      <button type="button" class="tool" data-tool="text"     data-i18n-title="toolText"     title="文字">T</button>
+      <button type="button" class="tool" data-tool="mosaic"   data-i18n-title="toolMosaic"   title="马赛克">▦</button>
+      <button type="button" class="tool" data-tool="marker"   data-i18n-title="toolMarker"   title="荧光笔">▮</button>
+      <button type="button" class="tool" data-tool="number"   data-i18n-title="toolNumber"   title="序号">①</button>
+      <button type="button" class="tool" data-tool="crop"     data-i18n-title="toolCrop"     title="裁剪">✂</button>
+      <button type="button" class="tool" data-tool="color"    data-i18n-title="toolColor"    title="取色">💉</button>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <!-- 颜色 -->
+    <div class="color-picker" id="color-picker">
+      <button type="button" class="color-dot active" data-color="#ef4444" style="--c:#ef4444"></button>
+      <button type="button" class="color-dot" data-color="#f97316" style="--c:#f97316"></button>
+      <button type="button" class="color-dot" data-color="#eab308" style="--c:#eab308"></button>
+      <button type="button" class="color-dot" data-color="#22c55e" style="--c:#22c55e"></button>
+      <button type="button" class="color-dot" data-color="#3b82f6" style="--c:#3b82f6"></button>
+      <button type="button" class="color-dot" data-color="#a855f7" style="--c:#a855f7"></button>
+      <button type="button" class="color-dot" data-color="#ffffff" style="--c:#ffffff"></button>
+      <button type="button" class="color-dot" data-color="#111827" style="--c:#111827"></button>
+      <input type="color" id="color-custom" value="#ef4444" title="自定义颜色" data-i18n-title="customColor">
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <!-- 线宽 -->
+    <div class="width-picker" id="width-picker">
+      <input type="range" id="stroke-range" min="1" max="24" value="4">
+      <span class="width-preview" id="width-preview"></span>
+    </div>
+
+    <div class="tool-sep"></div>
+
+    <button type="button" class="tool" id="btn-undo" data-i18n-title="undo" title="撤销">↶</button>
+    <button type="button" class="tool" id="btn-redo" data-i18n-title="redo" title="重做">↷</button>
+    <button type="button" class="tool" id="btn-clear" data-i18n-title="clearAll" title="清除全部">🗑</button>
+    <button type="button" class="tool" id="btn-recapture" data-i18n-title="recapture" title="重新截图">⟳</button>
+  </div>
+
+  <!-- 底部动作条 -->
+  <div class="actionbar" id="actionbar" hidden>
+    <button type="button" class="btn-ghost" id="btn-cancel" data-i18n="cancel">取消 (Esc)</button>
+    <div class="action-spacer"></div>
+    <button type="button" class="btn-ghost" id="btn-sticker" data-i18n="pinSticker">贴图</button>
+    <button type="button" class="btn-ghost" id="btn-copy" data-i18n="copyImage">复制</button>
+    <button type="button" class="btn-ghost" id="btn-save" data-i18n="saveImage">另存</button>
+    <button type="button" class="btn-primary" id="btn-done" data-i18n="done">完成 (Enter)</button>
+  </div>
+
+  <!-- 取色读数 -->
+  <div class="color-readout" id="color-readout" hidden></div>
+
+  <!-- 文字输入（点击画布后出现） -->
+  <textarea id="text-input" class="text-input" hidden spellcheck="false"></textarea>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/utils/constants.js?v=568328629352"></script>
+  <script src="js/i18n.js?v=568328629352"></script>
+  <script src="js/utils/error-handler.js?v=568328629352"></script>
+  <script>setupGlobalErrorTrap();</script>
+  <script src="js/utils/dev-shell.js?v=568328629352"></script>
+  <script src="js/utils/storage.js?v=568328629352"></script>
+  <script src="js/core.js?v=568328629352"></script>
+  <script src="js/capture.js?v=568328629352"></script>
+  <script src="js/annotate.js?v=568328629352"></script>
+  <script src="js/render.js?v=568328629352"></script>
+  <script src="js/picker.js?v=568328629352"></script>
+  <script src="js/overlay.js?v=568328629352"></script>
+</body>
+</html>

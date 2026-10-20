@@ -1,0 +1,20 @@
+.idea/
+*.log
+.DS_Store
+
+# Electron 桌面壳：依赖与打包产物不入库
+web/electron/node_modules/
+web/electron/release/
+
+# uTools 商店投稿产物（干净目录与插件包）不入库
+dist/
+
+# 临时实验文档与测试页，不入库
+FIX-SUMMARY*.md
+PLAN-*.md
+REVIEW.md
+TEST-GUIDE.md
+test-*.html
+
+# 前端镜像同步状态（内容哈希/缓存戳快照）
+web/build/.sync-state.json

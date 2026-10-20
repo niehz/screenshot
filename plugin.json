@@ -1,0 +1,46 @@
+{
+  "name": "screenshot-toolkit",
+  "developer": "screenshot-developer",
+  "main": "index.html",
+  "logo": "logo.png",
+  "preload": "preload.js",
+  "version": "1.0.0",
+  "pluginSetting": {
+    "height": 600
+  },
+  "features": [
+    {
+      "code": "screenshot",
+      "explain": "Screenshot toolkit: region/fullscreen capture, annotation editor, color picker, sticker pinning and history",
+      "cmds": ["截图", "截屏", "截图工具", "screenshot", "snip", "capture"]
+    },
+    {
+      "code": "screenshot-annotate",
+      "explain": "Annotate an image from clipboard or disk (arrows, boxes, mosaic, text, crop)",
+      "cmds": ["标注", "图片标注", "annotate", "edit image", "马赛克"]
+    },
+    {
+      "code": "color-pick",
+      "explain": "Pick a color from the screen, output HEX / RGB / HSL",
+      "cmds": ["取色", "取色器", "吸管", "color picker", "eyedropper", "hex color"]
+    },
+    {
+      "code": "sticker",
+      "explain": "Pin a screenshot on top of all windows as a movable, resizable sticker",
+      "cmds": ["贴图", "贴纸", "置顶图片", "sticker", "pin image"]
+    },
+    {
+      "code": "screenshot-file",
+      "explain": "Open an image file in the annotation editor",
+      "cmds": [
+        {
+          "type": "regex",
+          "label": "打开图片文件到标注器",
+          "match": "/\\.(?:png|jpe?g|gif|bmp|webp|tiff?|ico|avif)$/i",
+          "minLength": 5,
+          "maxLength": 500
+        }
+      ]
+    }
+  ]
+}

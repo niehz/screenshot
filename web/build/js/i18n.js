@@ -1,0 +1,227 @@
+// ========================================================
+// js/i18n.js — 中英文 i18n 词典
+// 加载顺序：constants 之后、error-handler 之前。
+// 键必须 zh / en 完全对称（validate 的 i18n 检查会比对）。
+// ========================================================
+const I18N = {
+  zh: {
+    appName: '截图工具',
+    captureTitle: '立即截图',
+    pickTitle: '屏幕取色',
+    settingsTitle: '设置',
+
+    dropText: '拖入图片，或点击选择文件',
+    dropHint: '支持 PNG / JPG / GIF / WebP',
+    qaCapture: '框选截图',
+    qaCaptureFull: '全屏截图',
+    qaPaste: '从剪贴板标注',
+    qaPick: '屏幕取色',
+    qaSticker: '贴图',
+
+    historyTitle: '历史记录',
+    historyEmpty: '暂无截图，先去截一张吧',
+    clearHistory: '清空',
+    historyCount: '{n} 条',
+
+    tabGeneral: '通用',
+    tabAnnotate: '标注',
+    tabHistory: '历史',
+
+    sysTheme: '主题',
+    sysThemeDesc: '自动跟随系统外观，或固定使用黑夜/白天主题',
+    sysThemeAuto: '自动',
+    sysThemeDark: '黑夜',
+    sysThemeLight: '白天',
+
+    saveFormat: '保存格式',
+    saveFormatDesc: '截图完成后的导出格式与 JPEG 质量',
+    fmtPng: 'PNG 无损',
+    fmtJpeg: 'JPEG',
+    jpegQuality: '质量',
+
+    hotkey: '全局快捷键',
+    hotkeyDesc: '呼出应用 / 触发截图的全局快捷键（仅桌面壳）',
+    hotkeyEnabled: '启用',
+    hotkeyReset: '重置',
+    hotkeySaved: '快捷键已保存',
+    hotkeyConflict: '快捷键被占用或无效，已还原',
+    hotkeyHint: '按下组合键（需含 Ctrl / Alt / Shift）',
+
+    strokeColor: '标注颜色',
+    strokeColorDesc: '箭头、矩形、画笔的默认颜色',
+    strokeWidth: '线条粗细',
+    strokeWidthDesc: '默认线宽（马赛克像素块大小单独控制）',
+    mosaicSize: '马赛克',
+    mosaicSizeDesc: '马赛克像素块尺寸，越大越模糊',
+
+    historyLimit: '历史容量',
+    historyLimitDesc: '最多保留的截图条数，超出自动淘汰最旧记录',
+    historyUnlimited: '不限',
+    saveOriginal: '保留原图',
+    saveOriginalDesc: '关闭后历史仅存缩略图，点击后需重新载入原图（更省空间）',
+    on: '开启',
+    off: '关闭',
+    reset: '重置默认',
+
+    colorResult: '取色结果',
+
+    toolRect: '矩形',
+    toolEllipse: '椭圆',
+    toolArrow: '箭头',
+    toolLine: '直线',
+    toolPen: '画笔',
+    toolText: '文字',
+    toolMosaic: '马赛克',
+    toolMarker: '荧光笔',
+    toolNumber: '序号',
+    toolCrop: '裁剪',
+    toolColor: '取色',
+    customColor: '自定义颜色',
+    undo: '撤销',
+    redo: '重做',
+    clearAll: '清除全部',
+    recapture: '重新截图',
+    cancel: '取消 (Esc)',
+    pinSticker: '贴图',
+    copyImage: '复制',
+    saveImage: '另存',
+    done: '完成 (Enter)',
+
+    // JS 运行时提示
+    copiedMsg: '已复制到剪贴板',
+    copyFailedMsg: '复制失败',
+    savedMsg: '已保存到 {path}',
+    saveFailedMsg: '保存失败',
+    captureFailedMsg: '截图失败',
+    captureCancelledMsg: '已取消截图',
+    noClipboardImage: '剪贴板里没有图片',
+    envUnsupported: '当前环境不支持截屏，请拖入图片或从剪贴板标注',
+    historyCleared: '历史记录已清空',
+    historyRemoved: '已删除该记录',
+    colorPickFailed: '取色失败',
+    stickerOpened: '已贴图',
+    stickerFailedMsg: '贴图失败',
+    settingsReset: '设置已重置',
+    imageLoaded: '图片已载入标注器',
+    loadFailedMsg: '图片载入失败',
+    toolTextHint: '在画布上点击以输入文字',
+    ready: '就绪',
+  },
+
+  en: {
+    appName: 'Screenshot Toolkit',
+    captureTitle: 'Capture now',
+    pickTitle: 'Pick color',
+    settingsTitle: 'Settings',
+
+    dropText: 'Drop an image, or click to choose a file',
+    dropHint: 'Supports PNG / JPG / GIF / WebP',
+    qaCapture: 'Region capture',
+    qaCaptureFull: 'Fullscreen capture',
+    qaPaste: 'Annotate clipboard',
+    qaPick: 'Pick color',
+    qaSticker: 'Sticker',
+
+    historyTitle: 'History',
+    historyEmpty: 'No captures yet — go take one',
+    clearHistory: 'Clear',
+    historyCount: '{n} items',
+
+    tabGeneral: 'General',
+    tabAnnotate: 'Annotate',
+    tabHistory: 'History',
+
+    sysTheme: 'Theme',
+    sysThemeDesc: 'Follow the system appearance, or force dark / light',
+    sysThemeAuto: 'Auto',
+    sysThemeDark: 'Dark',
+    sysThemeLight: 'Light',
+
+    saveFormat: 'Save format',
+    saveFormatDesc: 'Export format for finished captures, with JPEG quality',
+    fmtPng: 'PNG lossless',
+    fmtJpeg: 'JPEG',
+    jpegQuality: 'Quality',
+
+    hotkey: 'Global hotkey',
+    hotkeyDesc: 'Global hotkey to summon the app or trigger capture (desktop shell only)',
+    hotkeyEnabled: 'Enabled',
+    hotkeyReset: 'Reset',
+    hotkeySaved: 'Hotkey saved',
+    hotkeyConflict: 'Hotkey is taken or invalid — reverted',
+    hotkeyHint: 'Press a combo (must include Ctrl / Alt / Shift)',
+
+    strokeColor: 'Annotation color',
+    strokeColorDesc: 'Default color for arrows, rectangles and the pen',
+    strokeWidth: 'Stroke width',
+    strokeWidthDesc: 'Default stroke width (mosaic block size is controlled separately)',
+    mosaicSize: 'Mosaic',
+    mosaicSizeDesc: 'Mosaic block size — the larger, the blurrier',
+
+    historyLimit: 'History capacity',
+    historyLimitDesc: 'Keep at most this many captures; oldest ones are evicted',
+    historyUnlimited: 'Unlimited',
+    saveOriginal: 'Keep originals',
+    saveOriginalDesc: 'When off, only thumbnails are kept and the original is reloaded on demand (saves space)',
+    on: 'On',
+    off: 'Off',
+    reset: 'Reset defaults',
+
+    colorResult: 'Picked color',
+
+    toolRect: 'Rectangle',
+    toolEllipse: 'Ellipse',
+    toolArrow: 'Arrow',
+    toolLine: 'Line',
+    toolPen: 'Pen',
+    toolText: 'Text',
+    toolMosaic: 'Mosaic',
+    toolMarker: 'Highlighter',
+    toolNumber: 'Number',
+    toolCrop: 'Crop',
+    toolColor: 'Pick color',
+    customColor: 'Custom color',
+    undo: 'Undo',
+    redo: 'Redo',
+    clearAll: 'Clear all',
+    recapture: 'Recapture',
+    cancel: 'Cancel (Esc)',
+    pinSticker: 'Sticker',
+    copyImage: 'Copy',
+    saveImage: 'Save as',
+    done: 'Done (Enter)',
+
+    copiedMsg: 'Copied to clipboard',
+    copyFailedMsg: 'Copy failed',
+    savedMsg: 'Saved to {path}',
+    saveFailedMsg: 'Save failed',
+    captureFailedMsg: 'Capture failed',
+    captureCancelledMsg: 'Capture cancelled',
+    noClipboardImage: 'No image in the clipboard',
+    envUnsupported: 'Screen capture is unavailable here — drop an image or annotate the clipboard instead',
+    historyCleared: 'History cleared',
+    historyRemoved: 'Record removed',
+    colorPickFailed: 'Color pick failed',
+    stickerOpened: 'Pinned as sticker',
+    stickerFailedMsg: 'Sticker failed',
+    settingsReset: 'Settings reset',
+    imageLoaded: 'Image loaded into the annotator',
+    loadFailedMsg: 'Failed to load image',
+    toolTextHint: 'Click on the canvas to type',
+    ready: 'Ready',
+  },
+};
+
+// 当前语言（null = 跟随系统，由 core.js 解析后写入）
+let lang = 'zh';
+
+function t(key, vars) {
+  const dict = I18N[lang] || I18N.zh;
+  let s = dict[key] != null ? dict[key] : (I18N.zh[key] != null ? I18N.zh[key] : key);
+  if (vars) {
+    for (const k of Object.keys(vars)) {
+      s = s.split('{' + k + '}').join(String(vars[k]));
+    }
+  }
+  return s;
+}

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>截图工具 / Screenshot Toolkit</title>
+  <link rel="stylesheet" href="index.css?v=568328629352">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="header">
+      <div class="brand">
+        <img class="brand-logo" src="logo.png" alt="logo">
+        <span class="brand-name" data-i18n="appName">截图工具</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="btn-capture" data-i18n-title="captureTitle" title="立即截图">🎯</button>
+        <button class="btn-icon" id="btn-pick" data-i18n-title="pickTitle" title="屏幕取色">💉</button>
+        <button class="btn-icon" id="btn-lang" title="EN">EN</button>
+        <button class="btn-icon" id="btn-settings" data-i18n-title="settingsTitle" title="设置">⚙️</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- 空态 / 快捷入口 -->
+      <section class="empty-state" id="empty-state">
+        <div class="drop-zone" id="drop-zone" tabindex="0">
+          <div class="drop-icon">🖼️</div>
+          <div class="drop-text" data-i18n="dropText">拖入图片，或点击选择文件</div>
+          <div class="drop-hint" data-i18n="dropHint">支持 PNG / JPG / GIF / WebP</div>
+        </div>
+        <div class="quick-actions">
+          <button class="btn-primary" id="qa-capture" data-i18n="qaCapture">框选截图</button>
+          <button class="btn-secondary" id="qa-capture-full" data-i18n="qaCaptureFull">全屏截图</button>
+          <button class="btn-secondary" id="qa-paste" data-i18n="qaPaste">从剪贴板标注</button>
+          <button class="btn-secondary" id="qa-pick" data-i18n="qaPick">屏幕取色</button>
+          <button class="btn-secondary" id="qa-sticker" data-i18n="qaSticker">贴图</button>
+        </div>
+        <div class="env-hint" id="env-hint" hidden></div>
+        <input type="file" id="file-input" accept="image/*" hidden>
+      </section>
+
+      <!-- 历史记录 -->
+      <section class="history" id="history">
+        <div class="section-head">
+          <h2 data-i18n="historyTitle">历史记录</h2>
+          <div class="section-actions">
+            <span class="history-count" id="history-count"></span>
+            <button class="btn-secondary btn-sm" id="btn-clear-history" data-i18n="clearHistory">清空</button>
+          </div>
+        </div>
+        <div class="history-grid" id="history-grid"></div>
+        <div class="history-empty" id="history-empty" data-i18n="historyEmpty">暂无截图，先去截一张吧</div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span class="build-tag" id="build-tag"></span>
+      <span class="env-tag" id="env-tag"></span>
+    </footer>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="config-tabs" id="config-tabs">
+          <button type="button" class="config-tab active" data-tab="general" data-i18n="tabGeneral">通用</button>
+          <button type="button" class="config-tab" data-tab="annotate" data-i18n="tabAnnotate">标注</button>
+          <button type="button" class="config-tab" data-tab="history" data-i18n="tabHistory">历史</button>
+        </div>
+        <button class="modal-close" id="settings-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="config-pane" id="pane-general">
+          <div class="config-section">
+            <h4 data-i18n="sysTheme">主题</h4>
+            <p class="config-desc" data-i18n="sysThemeDesc">自动跟随系统外观，或固定使用黑夜/白天主题</p>
+            <div class="seg" id="sys-theme">
+              <button type="button" class="seg-btn active" data-value="auto" data-i18n="sysThemeAuto">自动</button>
+              <button type="button" class="seg-btn" data-value="dark" data-i18n="sysThemeDark">黑夜</button>
+              <button type="button" class="seg-btn" data-value="light" data-i18n="sysThemeLight">白天</button>
+            </div>
+          </div>
+          <div class="config-section">
+            <h4 data-i18n="saveFormat">保存格式</h4>
+            <p class="config-desc" data-i18n="saveFormatDesc">截图完成后的导出格式与 JPEG 质量</p>
+            <div class="seg" id="save-format">
+              <button type="button" class="seg-btn active" data-value="png" data-i18n="fmtPng">PNG 无损</button>
+              <button type="button" class="seg-btn" data-value="jpeg" data-i18n="fmtJpeg">JPEG</button>
+            </div>
+            <div class="row" id="jpeg-quality-row" hidden>
+              <label data-i18n="jpegQuality">质量</label>
+              <input type="range" id="jpeg-quality" min="40" max="100" value="90">
+              <span id="jpeg-quality-val">90</span>
+            </div>
+          </div>
+          <div class="config-section">
+            <h4 data-i18n="hotkey">全局快捷键</h4>
+            <p class="config-desc" data-i18n="hotkeyDesc">呼出应用 / 触发截图的全局快捷键（仅桌面壳）</p>
+            <div class="row">
+              <input type="text" id="hotkey-input" readonly data-i18n-ph="hotkeyHint" placeholder="Ctrl+Alt+A" autocomplete="off" spellcheck="false">
+              <label class="check"><input type="checkbox" id="hotkey-enabled" checked><span data-i18n="hotkeyEnabled">启用</span></label>
+              <button class="btn-secondary btn-sm" id="hotkey-reset" data-i18n="hotkeyReset">重置</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-pane hidden" id="pane-annotate">
+          <div class="config-section">
+            <h4 data-i18n="strokeColor">标注颜色</h4>
+            <p class="config-desc" data-i18n="strokeColorDesc">箭头、矩形、画笔的默认颜色</p>
+            <div class="color-row" id="default-color"></div>
+          </div>
+          <div class="config-section">
+            <h4 data-i18n="strokeWidth">线条粗细</h4>
+            <p class="config-desc" data-i18n="strokeWidthDesc">默认线宽（马赛克像素块大小单独控制）</p>
+            <div class="row">
+              <input type="range" id="stroke-width" min="1" max="24" value="4">
+              <span id="stroke-width-val">4</span>
+            </div>
+          </div>
+          <div class="config-section">
+            <h4 data-i18n="mosaicSize">马赛克</h4>
+            <p class="config-desc" data-i18n="mosaicSizeDesc">马赛克像素块尺寸，越大越模糊</p>
+            <div class="row">
+              <input type="range" id="mosaic-size" min="4" max="40" value="12">
+              <span id="mosaic-size-val">12</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-pane hidden" id="pane-history">
+          <div class="config-section">
+            <h4 data-i18n="historyLimit">历史容量</h4>
+            <p class="config-desc" data-i18n="historyLimitDesc">最多保留的截图条数，超出自动淘汰最旧记录</p>
+            <div class="seg" id="history-limit">
+              <button type="button" class="seg-btn" data-value="20">20</button>
+              <button type="button" class="seg-btn active" data-value="50">50</button>
+              <button type="button" class="seg-btn" data-value="100">100</button>
+              <button type="button" class="seg-btn" data-value="0" data-i18n="historyUnlimited">不限</button>
+            </div>
+          </div>
+          <div class="config-section">
+            <h4 data-i18n="saveOriginal">保留原图</h4>
+            <p class="config-desc" data-i18n="saveOriginalDesc">关闭后历史仅存缩略图，点击后需重新载入原图（更省空间）</p>
+            <div class="seg" id="save-original">
+              <button type="button" class="seg-btn active" data-value="on" data-i18n="on">开启</button>
+              <button type="button" class="seg-btn" data-value="off" data-i18n="off">关闭</button>
+            </div>
+          </div>
+          <div class="config-section">
+            <button class="btn-secondary" id="reset-settings" data-i18n="reset">重置默认</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 取色结果 -->
+  <div id="color-modal" class="modal">
+    <div class="modal-content color-content">
+      <div class="modal-header">
+        <h3 data-i18n="colorResult">取色结果</h3>
+        <button class="modal-close" id="color-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="color-swatch" id="color-swatch"></div>
+        <div class="color-values" id="color-values"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/utils/constants.js?v=568328629352"></script>
+  <script src="js/i18n.js?v=568328629352"></script>
+  <script src="js/utils/error-handler.js?v=568328629352"></script>
+  <script>setupGlobalErrorTrap();</script>
+  <script src="js/utils/dev-shell.js?v=568328629352"></script>
+  <script src="js/utils/storage.js?v=568328629352"></script>
+  <script src="js/core.js?v=568328629352"></script>
+  <script src="js/capture.js?v=568328629352"></script>
+  <script src="js/annotate.js?v=568328629352"></script>
+  <script src="js/render.js?v=568328629352"></script>
+  <script src="js/picker.js?v=568328629352"></script>
+  <script src="js/sticker.js?v=568328629352"></script>
+  <script src="js/history.js?v=568328629352"></script>
+  <script src="js/events.js?v=568328629352"></script>
+</body>
+</html>

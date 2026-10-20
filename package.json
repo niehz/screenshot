@@ -1,0 +1,21 @@
+{
+  "name": "screenshot-toolkit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "uTools screenshot toolkit (vanilla HTML/CSS/JS, no build step): capture, annotate, color pick, sticker, history",
+  "scripts": {
+    "dev": "node dev/scripts/dev-server.mjs",
+    "check:js": "node dev/scripts/validate.mjs --checks=js",
+    "check:plugin": "node dev/scripts/validate.mjs --checks=plugin",
+    "check:html": "node dev/scripts/validate.mjs --checks=html",
+    "check:i18n": "node dev/scripts/validate.mjs --checks=i18n",
+    "check:build": "node dev/scripts/validate.mjs --checks=build",
+    "build:web": "node dev/scripts/sync-build.mjs",
+    "build:utools": "node dev/scripts/build-utools.mjs",
+    "build:utools:zip": "node dev/scripts/build-utools.mjs --zip",
+    "test:load": "node dev/scripts/load-test.mjs",
+    "test": "node --test \"dev/tests/*.test.mjs\"",
+    "lint": "npm run check:plugin && npm run check:js && npm run check:html && npm run check:i18n && npm run check:build",
+    "verify": "npm run lint && npm run test:load && npm test"
+  }
+}

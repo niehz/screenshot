@@ -213,3 +213,74 @@ test('history stack: undo at base returns null', () => {
   assert.equal(r.canUndo, false);
   assert.equal(r.canRedo, false);
 });
+
+test('adjustRect: enlarge each edge by 1px', () => {
+  const s = h();
+  const base = { x: 10, y: 10, w: 20, h: 20 };
+  // 右边界 +1（dir>0，dx>0）
+  assert.deepEqual(s.call('adjustRect', base, 1, 0, 1, 100, 100), { x: 10, y: 10, w: 21, h: 20 });
+  // 左边界 -1
+  assert.deepEqual(s.call('adjustRect', base, -1, 0, 1, 100, 100), { x: 9, y: 10, w: 21, h: 20 });
+  // 上边界 -1
+  assert.deepEqual(s.call('adjustRect', base, 0, -1, 1, 100, 100), { x: 10, y: 9, w: 20, h: 21 });
+  // 下边界 +1
+  assert.deepEqual(s.call('adjustRect', base, 0, 1, 1, 100, 100), { x: 10, y: 10, w: 20, h: 21 });
+});
+
+test('adjustRect: shrink each edge by 1px', () => {
+  const s = h();
+  const base = { x: 10, y: 10, w: 20, h: 20 };
+  assert.deepEqual(s.call('adjustRect', base, 1, 0, -1, 100, 100), { x: 10, y: 10, w: 19, h: 20 });
+  assert.deepEqual(s.call('adjustRect', base, -1, 0, -1, 100, 100), { x: 11, y: 10, w: 19, h: 20 });
+  assert.deepEqual(s.call('adjustRect', base, 0, 1, -1, 100, 100), { x: 10, y: 10, w: 20, h: 19 });
+  assert.deepEqual(s.call('adjustRect', base, 0, -1, -1, 100, 100), { x: 10, y: 11, w: 20, h: 19 });
+});
+
+test('adjustRect: clamps to bounds and never inverts', () => {
+  const s = h();
+  // 贴左边界继续扩大不越界
+  const r1 = s.call('adjustRect', { x: 0, y: 0, w: 5, h: 5 }, -1, -1, 1, 100, 100);
+  assert.equal(r1.x, 0);
+  assert.equal(r1.y, 0);
+  // 单像素区域继续收小，保持至少 1px 且不反转
+  const r2 = s.call('adjustRect', { x: 10, y: 10, w: 1, h: 1 }, 1, 1, -1, 100, 100);
+  assert.ok(r2.w >= 1 && r2.h >= 1);
+  // 超出右下边界被夹住
+  const r3 = s.call('adjustRect', { x: 95, y: 95, w: 5, h: 5 }, 1, 1, 1, 100, 100);
+  assert.equal(r3.x + r3.w, 100);
+  assert.equal(r3.y + r3.h, 100);
+});
+
+test('resizeShapeCentered: grows symmetrically about center', () => {
+  const s = h();
+  const rect = s.call('createShape', 'rect', 40, 40, {});
+  const orig = s.call('updateShape', rect, 60, 60);
+  // 拖右下角到 (80,80)：中心保持 (50,50)，半宽半高各 +30
+  const r = s.call('resizeShapeCentered', orig, 'se', 80, 80);
+  assert.equal(r.x1, 20);
+  assert.equal(r.y1, 20);
+  assert.equal(r.x2, 80);
+  assert.equal(r.y2, 80);
+});
+
+test('resizeShapeCentered: only affected axis changes', () => {
+  const s = h();
+  const rect = s.call('createShape', 'rect', 40, 40, {});
+  const orig = s.call('updateShape', rect, 60, 60);
+  // 仅拖东边手柄：水平对称缩放，垂直方向不变
+  const r = s.call('resizeShapeCentered', orig, 'e', 70, 999);
+  assert.equal(r.x1, 30);
+  assert.equal(r.x2, 70);
+  assert.equal(r.y1, 40);
+  assert.equal(r.y2, 60);
+});
+
+test('createShape: carries dash / arrowHead / blurSize defaults', () => {
+  const s = h();
+  const a = s.call('createShape', 'arrow', 0, 0, {});
+  assert.equal(a.dash, false);
+  assert.equal(a.arrowHead, true);
+  const b = s.call('createShape', 'blur', 0, 0, {});
+  assert.equal(b.type, 'blur');
+  assert.ok(b.blurSize > 0);
+});

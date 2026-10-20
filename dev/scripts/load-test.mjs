@@ -19,7 +19,7 @@ export const ORDER_BY_ROLE = {
   main: ['utils/constants', 'i18n', 'utils/error-handler', 'utils/dev-shell', 'utils/storage', 'core',
     'capture', 'annotate', 'render', 'picker', 'sticker', 'history', 'events'],
   overlay: ['utils/constants', 'i18n', 'utils/error-handler', 'utils/dev-shell', 'utils/storage', 'core',
-    'capture', 'annotate', 'render', 'picker', 'overlay'],
+    'capture', 'annotate', 'render', 'picker', 'magnifier', 'overlay'],
   sticker: ['utils/constants', 'i18n', 'utils/error-handler', 'utils/dev-shell', 'utils/storage', 'core', 'sticker-window'],
 };
 

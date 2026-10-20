@@ -48,6 +48,7 @@ function loadSettings() {
   s.mosaicSize = clampNumber(s.mosaicSize, 4, 40, SYS_DEFAULTS.mosaicSize);
   s.historyLimit = clampNumber(s.historyLimit, 0, 500, SYS_DEFAULTS.historyLimit);
   s.saveOriginal = s.saveOriginal !== false;
+  if (s.submitBehavior !== 'exit' && s.submitBehavior !== 'stay') s.submitBehavior = SYS_DEFAULTS.submitBehavior;
   if (s.uiLang !== 'zh' && s.uiLang !== 'en') s.uiLang = null;
   if (typeof s.color !== 'string' || !/^#[0-9a-f]{3,8}$/i.test(s.color)) s.color = SYS_DEFAULTS.color;
   return s;

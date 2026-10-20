@@ -54,6 +54,11 @@ const I18N = {
     mosaicSize: '马赛克',
     mosaicSizeDesc: '马赛克像素块尺寸，越大越模糊',
 
+    submitBehavior: '提交方式',
+    submitBehaviorDesc: '复制 / 另存 / 贴图后是退出标注还是留在标注态继续编辑',
+    submitExit: '执行后退出',
+    submitStay: '留在标注态',
+
     historyLimit: '历史容量',
     historyLimitDesc: '最多保留的截图条数，超出自动淘汰最旧记录',
     historyUnlimited: '不限',
@@ -72,6 +77,10 @@ const I18N = {
     toolPen: '画笔',
     toolText: '文字',
     toolMosaic: '马赛克',
+    toolBlur: '高斯模糊',
+    toolEraser: '橡皮擦',
+    toggleDash: '虚线',
+    toggleArrowHead: '箭头',
     toolMarker: '荧光笔',
     toolNumber: '序号',
     toolCrop: '裁剪',
@@ -105,6 +114,7 @@ const I18N = {
     imageLoaded: '图片已载入标注器',
     loadFailedMsg: '图片载入失败',
     toolTextHint: '在画布上点击以输入文字',
+    noLastRegion: '没有可重复的截图区域',
     ready: '就绪',
   },
 
@@ -158,6 +168,11 @@ const I18N = {
     mosaicSize: 'Mosaic',
     mosaicSizeDesc: 'Mosaic block size — the larger, the blurrier',
 
+    submitBehavior: 'Submit behavior',
+    submitBehaviorDesc: 'After Copy / Save as / Sticker, exit the annotator or stay to keep editing',
+    submitExit: 'Exit after action',
+    submitStay: 'Stay in annotator',
+
     historyLimit: 'History capacity',
     historyLimitDesc: 'Keep at most this many captures; oldest ones are evicted',
     historyUnlimited: 'Unlimited',
@@ -176,6 +191,10 @@ const I18N = {
     toolPen: 'Pen',
     toolText: 'Text',
     toolMosaic: 'Mosaic',
+    toolBlur: 'Blur',
+    toolEraser: 'Eraser',
+    toggleDash: 'Dashed',
+    toggleArrowHead: 'Arrow head',
     toolMarker: 'Highlighter',
     toolNumber: 'Number',
     toolCrop: 'Crop',
@@ -208,6 +227,7 @@ const I18N = {
     imageLoaded: 'Image loaded into the annotator',
     loadFailedMsg: 'Failed to load image',
     toolTextHint: 'Click on the canvas to type',
+    noLastRegion: 'No previous capture region to repeat',
     ready: 'Ready',
   },
 };

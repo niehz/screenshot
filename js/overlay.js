@@ -18,6 +18,10 @@
   const ctx = scene ? scene.getContext('2d') : null;
   const maskCtx = mask ? mask.getContext('2d') : null;
 
+  const magnifier = typeof createMagnifier === 'function'
+    ? createMagnifier({ canvas: $('#magnifier-canvas'), elt: $('#magnifier'), zoom: 8 })
+    : null;
+
   const state = {
     phase: 'select',          // select | annotate
     dataURL: '',
@@ -35,6 +39,8 @@
     drag: null,
     selection: null,          // select 阶段的框选区（图像坐标）
     scaleFactor: 1,
+    cursor: { x: 0, y: 0 },   // 最近一次光标的图像坐标（键盘微调用）
+    historyIndex: 0,          // 历史回放游标（, . 切换）
   };
 
   // ── 初始化 ────────────────────────────────────────────────────
@@ -52,6 +58,9 @@
     state.style.color = SYS_SETTINGS.color;
     state.style.width = SYS_SETTINGS.width;
     state.style.mosaicSize = SYS_SETTINGS.mosaicSize;
+    state.style.dash = false;
+    state.style.arrowHead = true;
+    state.style.blurSize = DEFAULT_STYLE.blurSize;
   }
 
   // mode: 'select' = 进入框选（桌面壳全屏底图）；'annotate' = 直接标注（uTools 已框选过）
@@ -69,6 +78,7 @@
       state.imgW = canvas.width;
       state.imgH = canvas.height;
       layout();
+      if (magnifier) magnifier.setSource(canvas);
       state.shapes = [];
       state.history.reset([]);
       setPhase(mode === 'annotate' ? 'annotate' : 'select');
@@ -144,9 +154,74 @@
   // ── 指针坐标 ──────────────────────────────────────────────────
   function pointerToImage(e) {
     const p = cssToImage(state.fitRect, e.clientX, e.clientY);
-    return { x: clamp(p.x, 0, state.imgW), y: clamp(p.y, 0, state.imgH) };
+    const c = { x: clamp(p.x, 0, state.imgW), y: clamp(p.y, 0, state.imgH) };
+    state.cursor = { x: c.x, y: c.y };
+    return c;
   }
+  function cursorImage() { return { x: state.cursor.x, y: state.cursor.y }; }
   function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+  // ── 选区微调（对齐 Snipaste）──────────────────────────────────
+  // 方向键 / WASD 以图像像素为单位
+  function moveRect(r, dx, dy) {
+    const x = clamp(r.x + dx, 0, Math.max(0, state.imgW - r.w));
+    const y = clamp(r.y + dy, 0, Math.max(0, state.imgH - r.h));
+    return { x: x, y: y, w: r.w, h: r.h };
+  }
+  function nudgeRectEdge(r, dx, dy, dir) {
+    return adjustRect(r, dx, dy, dir, state.imgW, state.imgH);
+  }
+  function nudgePointer(dx, dy) {
+    state.cursor = {
+      x: clamp(state.cursor.x + dx, 0, state.imgW),
+      y: clamp(state.cursor.y + dy, 0, state.imgH),
+    };
+    if (state.selection) {
+      const c = state.cursor;
+      state.selection = normalizeRect(state.selection.x, state.selection.y, c.x, c.y);
+      renderMask(state.selection);
+    }
+  }
+  function repeatLastRegion() {
+    try {
+      const raw = safeGet(STORE_KEYS.lastRegion);
+      const r = raw ? JSON.parse(raw) : null;
+      if (!r || !(r.w > 0) || !(r.h > 0)) { toast(t('noLastRegion')); return; }
+      const x = clamp(r.x, 0, Math.max(0, state.imgW - r.w));
+      const y = clamp(r.y, 0, Math.max(0, state.imgH - r.h));
+      state.selection = { x: x, y: y, w: Math.min(r.w, state.imgW), h: Math.min(r.h, state.imgH) };
+      renderMask(state.selection);
+    } catch (e) { toast(t('noLastRegion')); }
+  }
+  function rememberRegion(sel) {
+    try { safeSet(STORE_KEYS.lastRegion, JSON.stringify({
+      x: Math.round(sel.x), y: Math.round(sel.y), w: Math.round(sel.w), h: Math.round(sel.h),
+    })); } catch (e) {}
+  }
+  function replayHistory(dir) {
+    let records = [];
+    try { records = JSON.parse(safeGet(STORE_KEYS.history) || '[]'); } catch (e) { records = []; }
+    if (!Array.isArray(records) || !records.length) { toast(t('historyEmpty')); return; }
+    state.historyIndex = clamp(state.historyIndex + dir, 0, records.length - 1);
+    const rec = records[state.historyIndex];
+    const src = rec && (rec.dataURL || rec.thumb);
+    if (!src) { toast(t('loadFailedMsg'), true); return; }
+    receiveInit({ dataURL: src, mode: 'select' });
+  }
+  function stepWidth(dir) {
+    const next = clamp(state.style.width + dir, 1, 24);
+    if (next === state.style.width) return;
+    state.style.width = next;
+    const range = $('#stroke-range');
+    if (range) range.value = String(next);
+    updateWidthPreview($('#width-preview'), next);
+  }
+  function cycleTool(dir) {
+    const tools = TOOLS.map((x) => x.id);
+    const idx = tools.indexOf(state.tool);
+    const next = tools[(idx + (dir || 1) + tools.length) % tools.length];
+    selectTool(next);
+  }
 
   // ── 事件 ──────────────────────────────────────────────────────
   function bindEvents() {
@@ -154,15 +229,54 @@
 
     // 框选阶段
     mask.addEventListener('mousedown', onSelectDown);
-    window.addEventListener('mousemove', (e) => { if (state.phase === 'select') onSelectMove(e); });
+    window.addEventListener('mousemove', (e) => {
+      if (state.phase !== 'select') return;
+      pointerToImage(e);
+      onSelectMove(e);
+    });
     window.addEventListener('mouseup', (e) => { if (state.phase === 'select') onSelectUp(e); });
 
     // 标注阶段
     scene.addEventListener('mousedown', onDrawDown);
-    window.addEventListener('mousemove', (e) => { if (state.phase === 'annotate') onDrawMove(e); });
+    window.addEventListener('mousemove', (e) => {
+      if (state.phase !== 'annotate') return;
+      pointerToImage(e);
+      onDrawMove(e);
+    });
     window.addEventListener('mouseup', (e) => { if (state.phase === 'annotate') onDrawUp(e); });
 
     window.addEventListener('keydown', onKeyDown);
+
+    // 放大镜：按住 Alt 显示，随光标更新
+    window.addEventListener('keydown', onMagnifierKeyDown);
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Alt' && magnifier && magnifier.isVisible()) magnifier.hide();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (magnifier && magnifier.isVisible()) {
+        magnifier.update(state.cursor.x, state.cursor.y, e.clientX, e.clientY);
+      }
+    });
+    window.addEventListener('blur', () => { if (magnifier && magnifier.isVisible()) magnifier.hide(); });
+
+    // Snipaste 式：右键中止截图（不在文字输入态）
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (textInput && !textInput.hidden) { textInput.hidden = true; return; }
+      cancel();
+    });
+    // Snipaste 式：双击选区内提交（复制并退出）
+    window.addEventListener('dblclick', () => {
+      if (state.phase !== 'annotate') return;
+      finish('copy');
+    });
+    // Snipaste 式：滚轮调笔宽（标注阶段）
+    window.addEventListener('wheel', (e) => {
+      if (state.phase !== 'annotate') return;
+      if (e.target && e.target.closest && e.target.closest('#toolbar')) return;
+      e.preventDefault();
+      stepWidth(e.deltaY < 0 ? 1 : -1);
+    }, { passive: false });
 
     // 工具条
     const toolGroup = $('#tool-group');
@@ -226,6 +340,7 @@
   }
 
   function confirmSelection(sel) {
+    rememberRegion(sel);
     state.imageCanvas = cropCanvas(state.fullCanvas, sel);
     state.imgW = state.imageCanvas.width;
     state.imgH = state.imageCanvas.height;
@@ -259,26 +374,47 @@
       fontSize: state.style.fontSize,
       alpha: state.style.alpha,
       n: nextNumber(state.shapes),
+      dash: !!state.style.dash,
+      arrowHead: state.style.arrowHead !== false,
+      blurSize: state.style.blurSize,
     };
   }
 
   function onDrawDown(e) {
     const p = pointerToImage(e);
 
+    // 橡皮擦：拖拽划过即删除命中图形
+    if (state.tool === SHAPE.ERASER) {
+      state.drag = { mode: 'erase' };
+      eraseAt(p);
+      return;
+    }
+
     // 选中态：先判断手柄 / 图形拖动
     if (state.selectedIndex >= 0 && state.shapes[state.selectedIndex]) {
       const shape = state.shapes[state.selectedIndex];
       const handle = hitTestHandle(shape, p.x, p.y, 8 / state.fitRect.scale);
       if (handle) {
-        state.drag = { mode: 'resize', handle: handle, index: state.selectedIndex };
+        state.drag = {
+          mode: 'resize', handle: handle, index: state.selectedIndex,
+          centered: e.ctrlKey || e.metaKey,
+          orig: cloneShape(shape),
+        };
         return;
       }
     }
     const hit = hitTest(state.shapes, p.x, p.y, 6 / state.fitRect.scale);
-    if (hit >= 0 && state.tool === SHAPE.RECT && isSelectable(state.shapes[hit])) {
-      // 默认工具下点击已有图形 → 拖动它
-      state.selectedIndex = hit;
-      state.drag = { mode: 'move', index: hit, last: p };
+    if (hit >= 0 && isMovableTool(state.tool)) {
+      // 直接拖动已有图形；按住 Ctrl 则先克隆一份再拖
+      if (e.ctrlKey || e.metaKey) {
+        const copy = cloneShape(state.shapes[hit]);
+        state.shapes.push(copy);
+        state.selectedIndex = state.shapes.length - 1;
+        state.drag = { mode: 'move', index: state.shapes.length - 1, last: p };
+      } else {
+        state.selectedIndex = hit;
+        state.drag = { mode: 'move', index: hit, last: p };
+      }
       render();
       return;
     }
@@ -295,10 +431,22 @@
     render();
   }
 
-  function isSelectable() { return true; }
+  // 可拖动/可缩放的「选择类」工具（排除画笔/文字/序号/橡皮擦）
+  function isMovableTool(tool) {
+    return tool !== SHAPE.PEN && tool !== SHAPE.TEXT && tool !== SHAPE.NUMBER && tool !== SHAPE.ERASER;
+  }
+
+  function eraseAt(p) {
+    const hit = hitTest(state.shapes, p.x, p.y, 8 / state.fitRect.scale);
+    if (hit < 0) return;
+    state.shapes.splice(hit, 1);
+    state.selectedIndex = -1;
+    render();
+  }
 
   function onDrawMove(e) {
     const p = pointerToImage(e);
+    if (state.drag && state.drag.mode === 'erase') { eraseAt(p); return; }
     if (state.drawing) {
       updateShape(state.drawing, p.x, p.y);
       render();
@@ -313,7 +461,10 @@
       return;
     }
     if (state.drag && state.drag.mode === 'resize') {
-      state.shapes[state.drag.index] = resizeShape(state.shapes[state.drag.index], state.drag.handle, p.x, p.y);
+      const shape = state.shapes[state.drag.index];
+      state.shapes[state.drag.index] = state.drag.centered
+        ? resizeShapeCentered(state.drag.orig, state.drag.handle, p.x, p.y)
+        : resizeShape(shape, state.drag.handle, p.x, p.y);
       render();
     }
   }
@@ -486,6 +637,32 @@
     on('#btn-copy', () => finish('copy'));
     on('#btn-save', () => finish('save'));
     on('#btn-sticker', () => finish('sticker'));
+    on('#btn-dash', () => {
+      state.style.dash = !state.style.dash;
+      const el = $('#btn-dash');
+      if (el) el.classList.toggle('active', state.style.dash);
+      applyStyleToSelection();
+    });
+    on('#btn-arrowhead', () => {
+      state.style.arrowHead = state.style.arrowHead === false;
+      const el = $('#btn-arrowhead');
+      if (el) el.classList.toggle('active', state.style.arrowHead !== false);
+      applyStyleToSelection();
+    });
+  }
+
+  // 将 dash/arrowHead 施加到当前选中的直线/箭头
+  function applyStyleToSelection() {
+    const i = state.selectedIndex;
+    if (i >= 0 && state.shapes[i]) {
+      const s = state.shapes[i];
+      if (s.type === SHAPE.LINE || s.type === SHAPE.ARROW) {
+        s.dash = !!state.style.dash;
+        s.arrowHead = state.style.arrowHead !== false;
+        state.history.push(state.shapes);
+      }
+    }
+    render();
   }
 
   function on(sel, fn) {
@@ -494,22 +671,137 @@
   }
 
   // ── 键盘 ──────────────────────────────────────────────────────
+  // 键位对齐 Snipaste：
+  //   Enter / Ctrl+C        提交（复制并退出）
+  //   Ctrl+S / Ctrl+Shift+S 另存并退出
+  //   Ctrl+T                贴图并退出
+  //   Ctrl+Z / Ctrl+Y       撤销 / 重做
+  //   Ctrl+Shift+Z          移除全部标注
+  //   Esc / 右键            中止截图
+  //   框选期：W A S D 移光标，Ctrl/Shift+方向键 扩/收选区，R 重复上次，Ctrl+A 全屏，, . 历史回放
+  //   标注期：[ ] 或滚轮 调笔宽，Tab 切工具
   function onKeyDown(e) {
-    if (e.key === 'Escape') { e.preventDefault(); cancel(); return; }
-    if (e.key === 'Enter') {
-      if (textInput && !textInput.hidden) return;
-      e.preventDefault();
-      finish('done');
+    const mod = e.ctrlKey || e.metaKey;
+    const key = e.key;
+    const lower = key.length === 1 ? key.toLowerCase() : key;
+
+    if (key === 'Escape') { e.preventDefault(); cancel(); return; }
+
+    // 文字输入中：仅放行其自身的键
+    if (textInput && !textInput.hidden) {
+      if (key === 'Escape') { e.preventDefault(); textInput.hidden = true; }
       return;
     }
-    const mod = e.ctrlKey || e.metaKey;
-    if (mod && (e.key === 'z' || e.key === 'Z')) {
+
+    if (key === 'Enter') { e.preventDefault(); finish('done'); return; }
+
+    if (mod && lower === 'z') {
       e.preventDefault();
-      if (e.shiftKey) { const s = state.history.redo(); if (s) { state.shapes = s; render(); } }
-      else { const s = state.history.undo(); if (s) { state.shapes = s; render(); } }
+      if (e.shiftKey) clearAllShapes();
+      else { const s = state.history.undo(); if (s) { state.shapes = s; state.selectedIndex = -1; render(); } }
+      return;
     }
-    if (mod && (e.key === 'c' || e.key === 'C')) { e.preventDefault(); finish('copy'); }
-    if (mod && (e.key === 's' || e.key === 'S')) { e.preventDefault(); finish('save'); }
+    if (mod && lower === 'y') {
+      e.preventDefault();
+      const s = state.history.redo(); if (s) { state.shapes = s; state.selectedIndex = -1; render(); }
+      return;
+    }
+    if (mod && lower === 'c') { e.preventDefault(); finish('copy'); return; }
+    if (mod && lower === 's') { e.preventDefault(); finish('save'); return; }
+    if (mod && lower === 't') { e.preventDefault(); finish('sticker'); return; }
+
+    if (state.phase === 'select' || state.phase === 'crop') { handleSelectKeys(e); return; }
+    if (state.phase === 'annotate') { handleAnnotateKeys(e); }
+  }
+
+  function clearAllShapes() {
+    if (!state.shapes.length) return;
+    state.shapes = [];
+    state.selectedIndex = -1;
+    state.history.push(state.shapes);
+    render();
+  }
+
+  // 框选阶段的键盘微调（对齐 Snipaste）
+  function handleSelectKeys(e) {
+    const mod = e.ctrlKey || e.metaKey;
+    const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+
+    // W A S D 移动光标 / 无选区时移动起点
+    const moves = { w: [0, -1], a: [-1, 0], s: [0, 1], d: [1, 0] };
+    if (!mod && !e.altKey && moves[e.key]) {
+      e.preventDefault();
+      nudgePointer(moves[e.key][0], moves[e.key][1]);
+      return;
+    }
+
+    if (arrows[e.key]) {
+      e.preventDefault();
+      const [dx, dy] = arrows[e.key];
+      if (!state.selection) {
+        // 无选区时方向键先建立 1x1 选区
+        const c = cursorImage();
+        state.selection = { x: Math.floor(c.x), y: Math.floor(c.y), w: 1, h: 1 };
+        renderMask(state.selection);
+        return;
+      }
+      if (!mod && !e.shiftKey) {
+        // 方向键整体平移选区 1px
+        state.selection = moveRect(state.selection, dx, dy);
+      } else {
+        // Ctrl 扩边 / Shift 收边
+        state.selection = nudgeRectEdge(state.selection, dx, dy, e.shiftKey ? -1 : 1);
+      }
+      renderMask(state.selection);
+      return;
+    }
+
+    if (!mod && (e.key === 'r' || e.key === 'R')) {
+      e.preventDefault();
+      repeatLastRegion();
+      return;
+    }
+    if (mod && (e.key === 'a' || e.key === 'A')) {
+      e.preventDefault();
+      state.selection = { x: 0, y: 0, w: state.imgW, h: state.imgH };
+      renderMask(state.selection);
+      return;
+    }
+    if (e.key === ',' || e.key === '.') {
+      e.preventDefault();
+      replayHistory(e.key === ',' ? -1 : 1);
+    }
+  }
+
+  // 标注阶段快捷键
+  function handleAnnotateKeys(e) {
+    if (e.key === '[' || e.key === ']') {
+      e.preventDefault();
+      stepWidth(e.key === ']' ? 1 : -1);
+      return;
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      cycleTool(e.shiftKey ? -1 : 1);
+    }
+  }
+
+  // 放大镜按键：Alt 显示；Shift 切换颜色格式；C 复制颜色值
+  function onMagnifierKeyDown(e) {
+    if (!magnifier) return;
+    if (e.key === 'Alt') {
+      e.preventDefault();
+      if (!magnifier.isVisible()) {
+        magnifier.show();
+        magnifier.update(state.cursor.x, state.cursor.y, 0, 0);
+      }
+      return;
+    }
+    if (!magnifier.isVisible()) return;
+    if (e.key === 'Shift') { magnifier.nextFormat(); }
+    else if (e.key === 'c' || e.key === 'C') {
+      if (magnifier.copyColor()) toast(t('copiedMsg'));
+    }
   }
 
   // ── 完成 / 取消 ───────────────────────────────────────────────
@@ -529,26 +821,61 @@
     if (action === 'done') {
       if (window.ssOverlay && typeof window.ssOverlay.done === 'function') window.ssOverlay.done(dataURL);
       else window.postMessage({ type: 'overlay:result', dataURL }, '*');
+      closeSelf();
       return;
     }
-    // 快捷动作：复制 / 保存 / 贴图 后继续停留在标注态
+    // 快捷动作：复制 / 保存 / 贴图。
+    // 对齐 Snipaste：动作成功后按 SYS_SETTINGS.submitBehavior 决定是否退出标注；
+    // 失败时一律留在覆盖层并提示，避免丢失已标注内容。
+    const exitAfter = SYS_SETTINGS.submitBehavior === 'exit';
     const s = shell();
+    const done = () => { if (exitAfter) closeSelf(); };
+    const fail = (msg) => { toast(msg, true); };
+
     if (action === 'copy') {
-      const p = s && typeof s.copyImage === 'function' ? s.copyImage(dataURL)
-        : Promise.resolve(false);
-      Promise.resolve(p).then((ok) => toast(ok ? t('copiedMsg') : t('copyFailedMsg'), !ok));
+      const p = s && typeof s.copyImage === 'function' ? s.copyImage(dataURL) : Promise.resolve(false);
+      Promise.resolve(p).then((ok) => {
+        if (ok) { toast(t('copiedMsg')); done(); } else { fail(t('copyFailedMsg')); }
+      }).catch(() => fail(t('copyFailedMsg')));
     } else if (action === 'save') {
-      const p = s && typeof s.saveImage === 'function' ? s.saveImage(dataURL) : Promise.reject(new Error('n/a'));
-      Promise.resolve(p).then((path) => toast(t('savedMsg', { path: path }))).catch(() => toast(t('saveFailedMsg'), true));
+      if (!(s && typeof s.saveImage === 'function')) { fail(t('saveFailedMsg')); return; }
+      Promise.resolve(s.saveImage(dataURL)).then((path) => {
+        toast(t('savedMsg', { path: path })); done();
+      }).catch(() => fail(t('saveFailedMsg')));
     } else if (action === 'sticker') {
-      const p = s && typeof s.createSticker === 'function' ? s.createSticker(dataURL) : Promise.reject(new Error('n/a'));
-      Promise.resolve(p).then(() => toast(t('stickerOpened'))).catch(() => toast(t('stickerFailedMsg'), true));
+      if (!(s && typeof s.createSticker === 'function')) { fail(t('stickerFailedMsg')); return; }
+      Promise.resolve(s.createSticker(dataURL, stickerRect())).then(() => {
+        toast(t('stickerOpened')); done();
+      }).catch(() => fail(t('stickerFailedMsg')));
     }
+  }
+
+  // 贴图窗初始位置（屏幕右上角附近），交由壳决定最终坐标
+  function stickerRect() {
+    const vw = window.screen && window.screen.width ? window.screen.width : window.innerWidth;
+    const vh = window.screen && window.screen.height ? window.screen.height : window.innerHeight;
+    const w = state.imgW || 400;
+    const h = state.imgH || 300;
+    return { x: Math.max(0, Math.round(vw - w - 24)), y: Math.round(vh * 0.12), width: w, height: h };
   }
 
   function cancel() {
     if (window.ssOverlay && typeof window.ssOverlay.cancel === 'function') window.ssOverlay.cancel();
     else window.postMessage({ type: 'overlay:cancel' }, '*');
+    closeSelf();
+  }
+
+  // 关闭覆盖层窗口：
+  // - Electron：主进程在收到 overlay:result/cancel 后会自行 w.close()，这里不再关（避免竞态）。
+  // - uTools / 浏览器演示壳：没有主进程代劳，覆盖层必须自行关闭，
+  //   否则无边框全屏窗会一直置顶挡住桌面（用户报告的“卡在覆盖层”）。
+  function closeSelf() {
+    if (window.ssOverlay && typeof window.ssOverlay.close === 'function') {
+      try { window.ssOverlay.close(); return; } catch (e) {}
+    }
+    const s = window.ssShell;
+    if (s && s.isElectron) return;
+    try { window.close(); } catch (e) {}
   }
 
   boot();

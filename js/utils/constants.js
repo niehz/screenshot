@@ -11,6 +11,7 @@ const STORE_KEYS = {
   settings:    'ss_settings',
   history:     'ss_history',
   lastCapture: 'ss_last_capture',
+  lastRegion:  'ss_last_region',
 };
 
 // 标注图形类型
@@ -24,6 +25,8 @@ const SHAPE = {
   MOSAIC:  'mosaic',
   MARKER:  'marker',
   NUMBER:  'number',
+  BLUR:    'blur',
+  ERASER:  'eraser',
 };
 
 // 工具列表与默认参数
@@ -35,8 +38,10 @@ const TOOLS = [
   { id: SHAPE.PEN,     icon: '✏️', key: 'toolPen' },
   { id: SHAPE.TEXT,    icon: 'T', key: 'toolText' },
   { id: SHAPE.MOSAIC,  icon: '▦', key: 'toolMosaic' },
+  { id: SHAPE.BLUR,    icon: '¶', key: 'toolBlur' },
   { id: SHAPE.MARKER,  icon: '▮', key: 'toolMarker' },
   { id: SHAPE.NUMBER,  icon: '①', key: 'toolNumber' },
+  { id: SHAPE.ERASER,  icon: '⌫', key: 'toolEraser' },
 ];
 
 // 默认标注样式
@@ -46,6 +51,7 @@ const DEFAULT_STYLE = {
   mosaicSize: 12,
   fontSize: 18,
   markerAlpha: 0.35,
+  blurSize: 10,
 };
 
 const COLOR_PALETTE = [
@@ -65,6 +71,7 @@ const SYS_DEFAULTS = {
   historyLimit: 50,        // 0 = 不限
   saveOriginal: true,      // 历史是否保留原图
   uiLang: null,            // null = 跟随系统
+  submitBehavior: 'exit',  // exit = 复制/另存/贴图后退出并回传（Snipaste 式）；stay = 留在标注态
 };
 
 // 历史缩略图尺寸（长边像素）

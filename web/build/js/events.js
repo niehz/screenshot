@@ -148,6 +148,10 @@ function bindSettings() {
   bindNumberRange('#stroke-width', '#stroke-width-val', 'width');
   bindNumberRange('#mosaic-size', '#mosaic-size-val', 'mosaicSize');
 
+  // 提交方式
+  setSegValue('#submit-behavior', SYS_SETTINGS.submitBehavior);
+  bindSeg('#submit-behavior', (v) => setSetting('submitBehavior', v === 'stay' ? 'stay' : 'exit'));
+
   // 历史
   setSegValue('#history-limit', SYS_SETTINGS.historyLimit);
   bindSeg('#history-limit', (v) => { setSetting('historyLimit', Number(v)); });
@@ -163,6 +167,7 @@ function bindSettings() {
     setSegValue('#save-format', SYS_SETTINGS.saveFormat);
     setSegValue('#history-limit', SYS_SETTINGS.historyLimit);
     setSegValue('#save-original', 'on');
+    setSegValue('#submit-behavior', SYS_SETTINGS.submitBehavior);
     const w = $('#stroke-width'); if (w) { w.value = String(SYS_SETTINGS.width); }
     const wv = $('#stroke-width-val'); if (wv) wv.textContent = String(SYS_SETTINGS.width);
     const m = $('#mosaic-size'); if (m) { m.value = String(SYS_SETTINGS.mosaicSize); }

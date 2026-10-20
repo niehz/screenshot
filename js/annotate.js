@@ -28,6 +28,9 @@ function createShape(type, x, y, style) {
     n: s.n != null ? s.n : 1,
     mosaicSize: s.mosaicSize != null ? s.mosaicSize : DEFAULT_STYLE.mosaicSize,
     alpha: s.alpha != null ? s.alpha : DEFAULT_STYLE.markerAlpha,
+    dash: !!s.dash,
+    arrowHead: s.arrowHead !== false,
+    blurSize: s.blurSize != null ? s.blurSize : DEFAULT_STYLE.blurSize,
   };
 }
 
@@ -66,6 +69,30 @@ function normalizeRect(x1, y1, x2, y2) {
     w: Math.abs(x2 - x1),
     h: Math.abs(y2 - y1),
   };
+}
+
+/**
+ * 按方向键语义扩/收选区边界 1 步（纯函数）。
+ * @param {{x:number,y:number,w:number,h:number}} r
+ * @param {number} dx -1 表示左边界，1 表示右边界，0 忽略
+ * @param {number} dy -1 表示上边界，1 表示下边界，0 忽略
+ * @param {number} dir 1 = 扩大（向外），-1 = 收小（向内）
+ * @param {number} maxW 底图宽 @param {number} maxH 底图高
+ */
+function adjustRect(r, dx, dy, dir, maxW, maxH) {
+  let left = r.x, top = r.y, right = r.x + r.w, bottom = r.y + r.h;
+  if (dx < 0) left = dir > 0 ? left - 1 : left + 1;
+  if (dx > 0) right = dir > 0 ? right + 1 : right - 1;
+  if (dy < 0) top = dir > 0 ? top - 1 : top + 1;
+  if (dy > 0) bottom = dir > 0 ? bottom + 1 : bottom - 1;
+  // 收小时避免反转，至少保留 1px
+  if (right <= left) { if (dx < 0) left = right - 1; else right = left + 1; }
+  if (bottom <= top) { if (dy < 0) top = bottom - 1; else bottom = top + 1; }
+  left = Math.max(0, Math.min(left, maxW - 1));
+  top = Math.max(0, Math.min(top, maxH - 1));
+  right = Math.max(left + 1, Math.min(right, maxW));
+  bottom = Math.max(top + 1, Math.min(bottom, maxH));
+  return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
 /** 图形包围盒（逻辑坐标） */
@@ -152,6 +179,8 @@ function hitTestShape(shape, x, y, tol) {
     case SHAPE.RECT:
     case SHAPE.MOSAIC:
     case SHAPE.MARKER:
+    case SHAPE.BLUR:
+    case SHAPE.ERASER:
       return pointInRect(x, y, shapeBounds(shape));
     case SHAPE.ELLIPSE:
       return pointInEllipse(x, y, shapeBounds(shape));
@@ -246,6 +275,41 @@ function resizeShape(shape, handle, x, y) {
 }
 
 /**
+ * 以中心为锚点缩放（按住 Ctrl 拖动手柄时）：对边相对中心对称移动。
+ * orig 为拖拽开始时的原始图形快照。
+ */
+function resizeShapeCentered(orig, handle, x, y) {
+  const b = shapeBounds(orig);
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const dHalfW = Math.abs(x - cx);
+  const dHalfH = Math.abs(y - cy);
+  let left = cx - dHalfW, right = cx + dHalfW;
+  let top = cy - dHalfH, bottom = cy + dHalfH;
+  // 仅受拖拽影响的方向改变，另一方向保持不变
+  const hasH = handle.indexOf('w') >= 0 || handle.indexOf('e') >= 0;
+  const hasV = handle.indexOf('n') >= 0 || handle.indexOf('s') >= 0;
+  if (!hasH) { left = b.x; right = b.x + b.w; }
+  if (!hasV) { top = b.y; bottom = b.y + b.h; }
+
+  if (orig.type === SHAPE.LINE || orig.type === SHAPE.ARROW) {
+    const c = cloneShape(orig);
+    const relX1 = b.w ? (orig.x1 - b.x) / b.w : 0;
+    const relY1 = b.h ? (orig.y1 - b.y) / b.h : 0;
+    const relX2 = b.w ? (orig.x2 - b.x) / b.w : 0;
+    const relY2 = b.h ? (orig.y2 - b.y) / b.h : 0;
+    c.x1 = left + relX1 * (right - left);
+    c.y1 = top + relY1 * (bottom - top);
+    c.x2 = left + relX2 * (right - left);
+    c.y2 = top + relY2 * (bottom - top);
+    return c;
+  }
+  return Object.assign(cloneShape(orig), {
+    x1: left, y1: top, x2: right, y2: bottom,
+  });
+}
+
+/**
  * 裁剪坐标变换：把图形平移到以 cropRect 左上角为原点的新坐标系。
  * 超出裁剪区的图形被裁剪到边界（仅矩形类），完全在外的被丢弃。
  */
@@ -253,7 +317,7 @@ function applyCrop(shapes, cropRect) {
   const out = [];
   for (const shape of (shapes || [])) {
     const c = moveShape(shape, -cropRect.x, -cropRect.y);
-    if (c.type === SHAPE.RECT || c.type === SHAPE.MOSAIC || c.type === SHAPE.MARKER || c.type === SHAPE.ELLIPSE) {
+    if (c.type === SHAPE.RECT || c.type === SHAPE.MOSAIC || c.type === SHAPE.MARKER || c.type === SHAPE.ELLIPSE || c.type === SHAPE.BLUR || c.type === SHAPE.ERASER) {
       const b = shapeBounds(c);
       const ix1 = Math.max(b.x, 0);
       const iy1 = Math.max(b.y, 0);
@@ -283,6 +347,7 @@ function serializeShapes(shapes) {
     points: s.points || undefined,
     color: s.color, width: s.width, text: s.text,
     fontSize: s.fontSize, n: s.n, mosaicSize: s.mosaicSize, alpha: s.alpha,
+    dash: !!s.dash, arrowHead: s.arrowHead !== false, blurSize: s.blurSize,
   })));
 }
 

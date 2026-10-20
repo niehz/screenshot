@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>截图工具 / Screenshot Toolkit</title>
-  <link rel="stylesheet" href="index.css?v=568328629352">
+  <link rel="stylesheet" href="index.css?v=101822434783">
 </head>
 <body>
   <div class="app" id="app">
@@ -128,6 +128,14 @@
               <span id="mosaic-size-val">12</span>
             </div>
           </div>
+          <div class="config-section">
+            <h4 data-i18n="submitBehavior">提交方式</h4>
+            <p class="config-desc" data-i18n="submitBehaviorDesc">复制 / 另存 / 贴图后是退出标注还是留在标注态继续编辑</p>
+            <div class="seg" id="submit-behavior">
+              <button type="button" class="seg-btn active" data-value="exit" data-i18n="submitExit">执行后退出</button>
+              <button type="button" class="seg-btn" data-value="stay" data-i18n="submitStay">留在标注态</button>
+            </div>
+          </div>
         </div>
 
         <div class="config-pane hidden" id="pane-history">
@@ -173,19 +181,19 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="js/utils/constants.js?v=568328629352"></script>
-  <script src="js/i18n.js?v=568328629352"></script>
-  <script src="js/utils/error-handler.js?v=568328629352"></script>
+  <script src="js/utils/constants.js?v=101822434783"></script>
+  <script src="js/i18n.js?v=101822434783"></script>
+  <script src="js/utils/error-handler.js?v=101822434783"></script>
   <script>setupGlobalErrorTrap();</script>
-  <script src="js/utils/dev-shell.js?v=568328629352"></script>
-  <script src="js/utils/storage.js?v=568328629352"></script>
-  <script src="js/core.js?v=568328629352"></script>
-  <script src="js/capture.js?v=568328629352"></script>
-  <script src="js/annotate.js?v=568328629352"></script>
-  <script src="js/render.js?v=568328629352"></script>
-  <script src="js/picker.js?v=568328629352"></script>
-  <script src="js/sticker.js?v=568328629352"></script>
-  <script src="js/history.js?v=568328629352"></script>
-  <script src="js/events.js?v=568328629352"></script>
+  <script src="js/utils/dev-shell.js?v=101822434783"></script>
+  <script src="js/utils/storage.js?v=101822434783"></script>
+  <script src="js/core.js?v=101822434783"></script>
+  <script src="js/capture.js?v=101822434783"></script>
+  <script src="js/annotate.js?v=101822434783"></script>
+  <script src="js/render.js?v=101822434783"></script>
+  <script src="js/picker.js?v=101822434783"></script>
+  <script src="js/sticker.js?v=101822434783"></script>
+  <script src="js/history.js?v=101822434783"></script>
+  <script src="js/events.js?v=101822434783"></script>
 </body>
 </html>

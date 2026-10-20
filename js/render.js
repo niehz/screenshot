@@ -60,6 +60,7 @@ function drawShape(ctx, shape) {
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  if (shape.dash) ctx.setLineDash([Math.max(6, shape.width * 3), Math.max(4, shape.width * 2)]);
 
   const b = shapeBounds(shape);
 
@@ -88,7 +89,16 @@ function drawShape(ctx, shape) {
       break;
 
     case SHAPE.ARROW:
-      drawArrow(ctx, shape.x1, shape.y1, shape.x2, shape.y2, shape.color, shape.width);
+      if (shape.arrowHead === false) {
+        ctx.strokeStyle = shape.color;
+        ctx.lineWidth = shape.width;
+        ctx.beginPath();
+        ctx.moveTo(shape.x1, shape.y1);
+        ctx.lineTo(shape.x2, shape.y2);
+        ctx.stroke();
+      } else {
+        drawArrow(ctx, shape.x1, shape.y1, shape.x2, shape.y2, shape.color, shape.width);
+      }
       break;
 
     case SHAPE.PEN: {
@@ -139,6 +149,14 @@ function drawShape(ctx, shape) {
 
     case SHAPE.MOSAIC:
       // 马赛克需要底图像素，交给 drawScene 处理
+      break;
+
+    case SHAPE.BLUR:
+      // 高斯模糊需要底图像素，交给 drawScene 处理
+      break;
+
+    case SHAPE.ERASER:
+      // 橡皮擦不产生可见图形（绘制时即删除命中图形）
       break;
 
     default:
@@ -233,10 +251,61 @@ function drawMosaic(ctx, shape, imageCanvas) {
 }
 
 /**
- * 绘制整个场景。
- * @param {CanvasRenderingContext2D} ctx
- * @param {object} opts { imageCanvas, shapes, showSelection, selectedIndex }
+ * 高斯模糊：从底图取区域，用画布的 filter 做模糊后画回（不可用时降级为像素块平均）。
  */
+function drawBlur(ctx, shape, imageCanvas) {
+  if (!imageCanvas) return;
+  const b = shapeBounds(shape);
+  const x0 = Math.max(0, Math.floor(b.x));
+  const y0 = Math.max(0, Math.floor(b.y));
+  const x1 = Math.min(imageCanvas.width, Math.ceil(b.x + b.w));
+  const y1 = Math.min(imageCanvas.height, Math.ceil(b.y + b.h));
+  if (x1 <= x0 || y1 <= y0) return;
+  const sw = x1 - x0;
+  const sh = y1 - y0;
+
+  const blur = Math.max(2, shape.blurSize || DEFAULT_STYLE.blurSize);
+  const tmp = document.createElement('canvas');
+  tmp.width = sw;
+  tmp.height = sh;
+  const tctx = tmp.getContext('2d');
+  // 扩展取图范围以缓解边缘透明扩散
+  const pad = Math.ceil(blur);
+  const ex0 = Math.max(0, x0 - pad);
+  const ey0 = Math.max(0, y0 - pad);
+  const ex1 = Math.min(imageCanvas.width, x1 + pad);
+  const ey1 = Math.min(imageCanvas.height, y1 + pad);
+
+  ctx.save();
+  if (typeof tctx.filter === 'string') {
+    tctx.filter = 'blur(' + blur + 'px)';
+    tctx.drawImage(imageCanvas, ex0, ey0, ex1 - ex0, ey1 - ey0, ex0 - x0, ey0 - y0, ex1 - ex0, ey1 - ey0);
+    tctx.filter = 'none';
+    ctx.drawImage(tmp, x0, y0);
+  } else {
+    // 降级：像素块平均（近似模糊）
+    const block = Math.max(2, Math.round(blur));
+    downscaleBlur(tctx, imageCanvas, x0, y0, sw, sh, block);
+    ctx.drawImage(tmp, x0, y0);
+  }
+  ctx.restore();
+}
+
+/** filter 不可用时的降级模糊：缩小再放大 */
+function downscaleBlur(tctx, imageCanvas, x0, y0, sw, sh, block) {
+  const cols = Math.max(1, Math.ceil(sw / block));
+  const rows = Math.max(1, Math.ceil(sh / block));
+  const small = document.createElement('canvas');
+  small.width = cols;
+  small.height = rows;
+  const sctx = small.getContext('2d');
+  sctx.imageSmoothingEnabled = true;
+  sctx.drawImage(imageCanvas, x0, y0, sw, sh, 0, 0, cols, rows);
+  tctx.imageSmoothingEnabled = true;
+  tctx.drawImage(small, 0, 0, cols, rows, 0, 0, sw, sh);
+}
+
+
 function drawScene(ctx, opts) {
   const o = opts || {};
   const shapes = o.shapes || [];
@@ -246,12 +315,13 @@ function drawScene(ctx, opts) {
     ctx.drawImage(o.imageCanvas, 0, 0);
   }
 
-  // 先画马赛克（依赖原图），再画其余图形
+  // 先画依赖原图的效果（马赛克 / 模糊），再画其余图形
   for (const s of shapes) {
     if (s.type === SHAPE.MOSAIC) drawMosaic(ctx, s, o.imageCanvas);
+    else if (s.type === SHAPE.BLUR) drawBlur(ctx, s, o.imageCanvas);
   }
   for (const s of shapes) {
-    if (s.type !== SHAPE.MOSAIC) drawShape(ctx, s);
+    if (s.type !== SHAPE.MOSAIC && s.type !== SHAPE.BLUR) drawShape(ctx, s);
   }
 
   if (o.showSelection && o.selectedIndex >= 0 && shapes[o.selectedIndex]) {

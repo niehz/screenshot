@@ -287,11 +287,13 @@ window.ssOverlay = {
   },
   recapture() {
     if (window.utools && typeof window.utools.sendToParent === 'function') {
-      try { window.utools.sendToParent('overlay:cancel', { recapture: true }); return; } catch (e) {}
-    }
-    if (ipcRenderer) { ipcRenderer.send('overlay:cancel', { recapture: true }); return; }
-    try { new BroadcastChannel('ss-overlay').postMessage({ type: 'overlay:cancel', recapture: true }); } catch (e) {}
+      try { window.utools.sendToParent('overlay:cancel', { recapture: true }); } catch (e) {}
+    } else if (ipcRenderer) { ipcRenderer.send('overlay:cancel', { recapture: true }); }
+    else { try { new BroadcastChannel('ss-overlay').postMessage({ type: 'overlay:cancel', recapture: true }); } catch (e) {} }
+    try { window.close(); } catch (e) {}
   },
+  // uTools / 浏览器演示壳没有主进程代劳关窗，覆盖层回传结果后需自行关闭。
+  close() { try { window.close(); } catch (e) {} },
 };
 
 window.ssSticker = {

@@ -99,6 +99,11 @@ const I18N = {
     // JS 运行时提示
     copiedMsg: '已复制到剪贴板',
     copyFailedMsg: '复制失败',
+    rotatedMsg: '已旋转',
+    rotateLeft: '逆时针旋转',
+    rotateRight: '顺时针旋转',
+    flipH: '水平翻转',
+    flipV: '垂直翻转',
     savedMsg: '已保存到 {path}',
     saveFailedMsg: '保存失败',
     captureFailedMsg: '截图失败',
@@ -212,6 +217,11 @@ const I18N = {
 
     copiedMsg: 'Copied to clipboard',
     copyFailedMsg: 'Copy failed',
+    rotatedMsg: 'Rotated',
+    rotateLeft: 'Rotate left',
+    rotateRight: 'Rotate right',
+    flipH: 'Flip horizontal',
+    flipV: 'Flip vertical',
     savedMsg: 'Saved to {path}',
     saveFailedMsg: 'Save failed',
     captureFailedMsg: 'Capture failed',
